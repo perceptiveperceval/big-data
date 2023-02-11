@@ -1,3 +1,4 @@
+
 import time
 import vnstock
 from datetime import date,timedelta
@@ -57,15 +58,20 @@ request_df = spark.createDataFrame([
           ])\
           .withColumn("execute", udf_executeRestApi(col("url"), col("body")))
 request_df_collected = request_df.select(col('execute.ticker'),explode(col("execute.data")).alias("data"))\
-    .select(
-        col("ticker"), 
-        col('data.volume'),
-        col("data.close"),
-        col("data.open"),
-        col("data.high"),
-        col("data.low"),
-        col("data.tradingDate")) \
-   .collect() #write to hdfs
+    .select(col('data.volume'),
+            col("ticker"), 
+            col("data.close"),
+            col("data.open"),
+            col("data.high"),
+            col("data.low"),
+            col("data.tradingDate")) \
+    .withColumnRenamed("ticker","ticker_name") \
+    .withColumnRenamed("open","open_price")\
+    .withColumnRenamed("high","high_price")\
+    .withColumnRenamed("low","low_price")\
+    .withColumnRenamed("close","close_price")\
+    .withColumnRenamed("tradingDate","trading_date")\
+    .collect() #write to hdfs
 
 schema = StructType([
       StructField("ticker_name", StringType(), True),
@@ -77,4 +83,10 @@ schema = StructType([
       StructField("trading_date", StringType())])
 
 for row in request_df_collected:
-  spark.createDataFrame([row],schema).coalesce(1).write.json("hdfs://node-master:9000/tmp/test.json")
+  spark.createDataFrame([row],schema).select("volume","ticker_name","open_price","high_price","low_price","close_price","trading_date") \
+  .coalesce(1).write.json("hdfs://node-master:9000/test/{}.json".format(row.ticker))
+
+# # spark.stop()
+
+
+
