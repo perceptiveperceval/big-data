@@ -1,4 +1,3 @@
-
 import time
 import vnstock
 from datetime import date,timedelta
@@ -57,36 +56,25 @@ request_df = spark.createDataFrame([
             RestApiRequest('https://apipubaws.tcbs.com.vn/stock-insight/v1/stock/bars-long-term?ticker={}&type=stock&resolution=D&from={}&to={}'.format(ticker, fd, td) , body) for ticker in tickers[:2]
           ])\
           .withColumn("execute", udf_executeRestApi(col("url"), col("body")))
-request_df_collected = request_df.select(col('execute.ticker'),explode(col("execute.data")).alias("data"))\
-    .select(col('data.volume'),
-            col("ticker"), 
-            col("data.close"),
-            col("data.open"),
-            col("data.high"),
-            col("data.low"),
-            col("data.tradingDate")) \
-    .withColumnRenamed("ticker","ticker_name") \
-    .withColumnRenamed("open","open_price")\
-    .withColumnRenamed("high","high_price")\
-    .withColumnRenamed("low","low_price")\
-    .withColumnRenamed("close","close_price")\
-    .withColumnRenamed("tradingDate","trading_date")\
-    .collect() #write to hdfs
+request_df_collected = request_df.collect() #write to hdfs
 
 schema = StructType([
-      StructField("ticker_name", StringType(), True),
-      StructField("volume", IntegerType()),
-      StructField("close_price", FloatType()),
       StructField("open_price", FloatType()),
       StructField("high_price", FloatType()),
       StructField("low_price", FloatType()),
+      StructField("close_price", FloatType()),
+      StructField("volume", IntegerType()),
       StructField("trading_date", StringType())])
 
 for row in request_df_collected:
-  spark.createDataFrame([row],schema).select("volume","ticker_name","open_price","high_price","low_price","close_price","trading_date") \
-  .coalesce(1).write.json("hdfs://node-master:9000/test/{}.json".format(row.ticker))
-
-# # spark.stop()
-
-
-
+  queries =spark.createDataFrame(
+       row.execute.data,schema).withColumn("ticker_name", lit(row.execute.ticker)) \
+       .select("close_price","high_price","low_price","open_price","ticker_name","trading_date","volume").collect()
+  try:
+    collect_file_df = spark.read.json("hdfs://node-master:9000/test/{}.json".format(row.execute.ticker)).collect()
+  except:
+    collect_file_df = [row]
+  else:
+    final = spark.createDataFrame(collect_file_df + queries)
+    final.drop_duplicates(subset = ['trading_date']) \
+    .write.mode("overwrite").json("hdfs://node-master:9000/test/{}.json".format(row.execute.ticker))
