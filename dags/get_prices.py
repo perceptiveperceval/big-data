@@ -13,7 +13,6 @@ tickers = vnstock.listing_companies().ticker
 fd = int(time.mktime(time.strptime((date.today()- timedelta(days=10)).strftime("%Y-%m-%d"), "%Y-%m-%d")))
 td = int(time.mktime(time.strptime((date.today()- timedelta(days=2)).strftime("%Y-%m-%d"), "%Y-%m-%d")))
 
-
 body = json.dumps({
 })
 
@@ -54,7 +53,7 @@ spark = SparkSession.builder.appName("UDF REST Demo").getOrCreate()
 # requests
 RestApiRequest = Row("url", "body")
 request_df = spark.createDataFrame([
-            RestApiRequest('https://apipubaws.tcbs.com.vn/stock-insight/v1/stock/bars-long-term?ticker={}&type=stock&resolution=D&from={}&to={}'.format(ticker, fd, td) , body) for ticker in tickers[0]
+            RestApiRequest('https://apipubaws.tcbs.com.vn/stock-insight/v1/stock/bars-long-term?ticker={}&type=stock&resolution=D&from={}&to={}'.format(ticker, fd, td) , body) for ticker in tickers[:2]
           ])\
           .withColumn("execute", udf_executeRestApi(col("url"), col("body")))
 request_df_collected = request_df.select(col('execute.ticker'),explode(col("execute.data")).alias("data"))\
@@ -84,8 +83,4 @@ schema = StructType([
 
 for row in request_df_collected:
   spark.createDataFrame([row],schema).select("volume","ticker_name","open_price","high_price","low_price","close_price","trading_date") \
-  .coalesce(1).write.json("/content/stock/"+row.ticker,mode="append")
-
-# spark.stop()
-
-
+  .coalesce(1).write.json("hdfs://node-master:9000/tmp")
