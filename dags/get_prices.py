@@ -4,7 +4,7 @@ from datetime import date,timedelta
 from pyspark.sql import SparkSession
 import requests
 import json
-from pyspark.sql.functions import udf, col, explode
+from pyspark.sql.functions import udf, col, explode,lit
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, ArrayType,FloatType,TimestampType
 from pyspark.sql import Row
 from pyspark import SparkContext
@@ -74,7 +74,7 @@ for row in request_df_collected:
     collect_file_df = spark.read.json("hdfs://node-master:9000/test/{}.json".format(row.execute.ticker)).collect()
   except:
     collect_file_df = [row]
-  finally:
+  finally		:
     final = spark.createDataFrame(collect_file_df + queries)
     final.drop_duplicates(subset = ['trading_date']) \
     .write.mode("overwrite").json("hdfs://node-master:9000/test/{}.json".format(row.execute.ticker))
