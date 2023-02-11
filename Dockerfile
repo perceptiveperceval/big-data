@@ -16,11 +16,13 @@ RUN pip install numpy
 RUN pip install matplotlib
 RUN pip install scikit-learn
 RUN pip install seaborn
-RUN pip install torch==1.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
-RUN pip install sparktorch
+#RUN pip install torch==1.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+#RUN pip install sparktorch
 RUN pip install joblibspark
 RUN pip install vnstock
-RUN pip install prophet
+#RUN pip install prophet
+RUN pip install statsforecast
+RUN pip install fugue
 RUN echo "spark.sql.autoBroadcastJoinThreshold=-1" >> /opt/bitnami/spark/conf/spark-defaults.conf.template
 # set java.arg.2=-Xms512m
 RUN echo "spark.driver.memory=10g" >> /opt/bitnami/spark/conf/spark-defaults.conf
