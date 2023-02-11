@@ -39,13 +39,24 @@ def crawler_job(tickers, start_date, end_date, pbar, idx):
 
 def preprocess(data, ticker):
     for item in data:
-        item["ticker_name"] = ticker
+        item['ticker_name'] = ticker
+        item["close_price"] = item["close"]
+        item["open_price"] = item["open"]
+        item["high_price"] = item["high"]
+        item["low_price"] = item["low"]
+        item["trading_date"] = item["tradingDate"]
+        del item['ticker']
+        del item['close']
+        del item['open']
+        del item['high']
+        del item['low']
+        del item['tradingDate']
     return data
 
 
 if __name__ == "__main__":
     save_dir = 'raw_data'
-    total_size_crawl = 512
+    total_size_crawl = 1024
     os.makedirs(save_dir, exist_ok=True)
     tickers = listing_companies()['ticker'].tolist()
 
