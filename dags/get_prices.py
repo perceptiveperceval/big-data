@@ -77,4 +77,4 @@ schema = StructType([
       StructField("trading_date", StringType())])
 
 for row in request_df_collected:
-  spark.createDataFrame([row],schema).coalesce(1).write.json("hdfs://node-master:9000/tmp")
+  spark.createDataFrame([row],schema).coalesce(1).write.json("hdfs://node-master:9000/tmp/test.json")
