@@ -58,16 +58,29 @@ request_df = sc.createDataFrame([
           ])\
           .withColumn("execute", udf_executeRestApi(col("url"), col("body")))
 request_df_collected = request_df.select(col('execute.ticker'),explode(col("execute.data")).alias("data"))\
-    .select(col('ticker'),col("data.open"), col("data.high"),col("data.low"),col("data.close"),col("data.volume"),col("data.tradingDate")).toPandas() #write to hdfs
+    .select(col('data.volume'),
+            col("ticker"), 
+            col("data.close"),
+            col("data.open"),
+            col("data.high"),
+            col("data.low"),
+            col("data.tradingDate")) \
+    .withColumnRenamed("ticker","ticker_name") \
+    .withColumnRenamed("open","open_price")\
+    .withColumnRenamed("high","high_price")\
+    .withColumnRenamed("low","low_price")\
+    .withColumnRenamed("close","close_price")\
+    .withColumnRenamed("tradingDate","trading_date")\
+    .collect() #write to hdfs
 
 schema = StructType([
-   StructField("ticker", StringType(), True),
-      StructField("open", FloatType()),
-      StructField("high", FloatType()),
-      StructField("low", FloatType()),
-      StructField("close", FloatType()),
       StructField("volume", IntegerType()),
-      StructField("tradingDate", StringType())])
+      StructField("ticker_name", StringType(), True),
+      StructField("open_price", FloatType()),
+      StructField("high_price", FloatType()),
+      StructField("low_price", FloatType()),
+      StructField("close_price", FloatType()),
+      StructField("trading_date", StringType())])
 
 for row in request_df_collected:
   sc.createDataFrame(row).write.json("/content/stock/"+row.ticker+".json",mode = "append")
