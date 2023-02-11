@@ -10,7 +10,7 @@ from pyspark.sql import Row
 from pyspark import SparkContext
 
 tickers = vnstock.listing_companies().ticker
-fd = int(time.mktime(time.strptime((date.today()- timedelta(days=3)).strftime("%Y-%m-%d"), "%Y-%m-%d")))
+fd = int(time.mktime(time.strptime((date.today()- timedelta(days=10)).strftime("%Y-%m-%d"), "%Y-%m-%d")))
 td = int(time.mktime(time.strptime((date.today()- timedelta(days=2)).strftime("%Y-%m-%d"), "%Y-%m-%d")))
 
 
@@ -49,12 +49,12 @@ schema = StructType([
 #
 udf_executeRestApi = udf(executeRestApi, schema)
 
-# spark = SparkSession.builder.appName("UDF REST Demo").getOrCreate()
-sc = SparkContext("local", "First App")
+spark = SparkSession.builder.appName("UDF REST Demo").getOrCreate()
+
 # requests
 RestApiRequest = Row("url", "body")
-request_df = sc.createDataFrame([
-            RestApiRequest('https://apipubaws.tcbs.com.vn/stock-insight/v1/stock/bars-long-term?ticker={}&type=stock&resolution=D&from={}&to={}'.format(ticker, fd, td) , body) for ticker in tickers
+request_df = spark.createDataFrame([
+            RestApiRequest('https://apipubaws.tcbs.com.vn/stock-insight/v1/stock/bars-long-term?ticker={}&type=stock&resolution=D&from={}&to={}'.format(ticker, fd, td) , body) for ticker in tickers[0]
           ])\
           .withColumn("execute", udf_executeRestApi(col("url"), col("body")))
 request_df_collected = request_df.select(col('execute.ticker'),explode(col("execute.data")).alias("data"))\
@@ -74,16 +74,18 @@ request_df_collected = request_df.select(col('execute.ticker'),explode(col("exec
     .collect() #write to hdfs
 
 schema = StructType([
-      StructField("volume", IntegerType()),
       StructField("ticker_name", StringType(), True),
+      StructField("volume", IntegerType()),
+      StructField("close_price", FloatType()),
       StructField("open_price", FloatType()),
       StructField("high_price", FloatType()),
       StructField("low_price", FloatType()),
-      StructField("close_price", FloatType()),
       StructField("trading_date", StringType())])
 
 for row in request_df_collected:
-  sc.createDataFrame(row).write.json("/content/stock/"+row.ticker+".json",mode = "append")
+  spark.createDataFrame([row],schema).select("volume","ticker_name","open_price","high_price","low_price","close_price","trading_date") \
+  .coalesce(1).write.json("/content/stock/"+row.ticker,mode="append")
 
 # spark.stop()
+
 
