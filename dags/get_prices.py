@@ -74,7 +74,7 @@ for row in request_df_collected:
     collect_file_df = spark.read.json("hdfs://node-master:9000/test/{}.json".format(row.execute.ticker)).collect()
   except:
     collect_file_df = [row]
-  else:
+  finally:
     final = spark.createDataFrame(collect_file_df + queries)
     final.drop_duplicates(subset = ['trading_date']) \
     .write.mode("overwrite").json("hdfs://node-master:9000/test/{}.json".format(row.execute.ticker))
