@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.bash import *
@@ -22,11 +21,11 @@ with DAG(
                                     conn_id = "spark_default",
                                     dag = dag)
     predict_spark_job = SparkSubmitOperator(task_id = "spark_default",
-                                    application = "forecasting.py",
+                                    application = "/home2/hadoop/project/big-data/forecasting.py",
                                     conn_id = "spark_default",
                                     dag = dag)
     visualize_spark_job = SparkSubmitOperator(task_id = "visualize",
-                                        application = "visualize.py",
+                                        application = "/home2/hadoop/project/big-data/visualize.py",
                                         conn_id = "spark_default",
                                         dag = dag)
     
