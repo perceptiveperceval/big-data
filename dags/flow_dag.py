@@ -1,27 +1,34 @@
 
 from datetime import datetime
 from airflow import DAG
+from airflow.operators.bash import *
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from datetime import datetime, date
 import os
-    
-default_args = {'owner': 'airflow','start_date': datetime(2023, 1, 1,1),}
+from config import DATA_PATH, RAW_DATA_PATH
+
+
+default_args = {'owner': 'airflow',}
 
 
 with DAG(
-    dag_id='flow',
-    description='Workflow',
-    start_date=datetime(2023, 1, 1),
-    schedule_interval='@daily'
+    dag_id='complete_flow',
+    description='Complete flow, ran weekly, crawl all data and predict/visualize SAM index',
+    start_date=datetime(2023, 2, 19),
+    schedule_interval= '@weekly'
 ) as dag:
-    path = os.getcwd()
-    name = "get_prices.py"
-    for root, dirs, files in os.walk(path):
-        if name in files:
-            app_path = (os.path.join(root, name))
-            break
-
-    spark_job = SparkSubmitOperator(task_id = "get_prices",
-                                    application = app_path,
+    
+    crawl_spark_job = SparkSubmitOperator(task_id = "get_prices",
+                                    application = "get_prices_complete.py",
                                     conn_id = "spark_default",
                                     dag = dag)
+    # predict_spark_job = SparkSubmitOperator(task_id = "get_prices_simulation",
+    #                                 application = "forecasting.py",
+    #                                 conn_id = "spark_default",
+    #                                 dag = dag)
+    # visualize_spark_job = SparkSubmitOperator(task_id = "visualize_simulation",
+    #                                     application = "visualize.py",
+    #                                     conn_id = "spark_default",
+    #                                     dag = dag)
+    
+    # crawl_spark_job >> [predict_spark_job, visualize_spark_job]
