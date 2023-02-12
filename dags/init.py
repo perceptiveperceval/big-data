@@ -19,6 +19,6 @@ with DAG(
 
 
     spark_crawl = SparkSubmitOperator(task_id = "crawl_recent_prices",
-                                    application = "/home2/hadoop/project/big-data/complete/get_prices_init.py" ,
+                                    application = "/home2/hadoop/project/big-data/init/get_prices_init.py" ,
                                     conn_id = "spark_default",
                                     dag = dag)

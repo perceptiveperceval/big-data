@@ -18,7 +18,7 @@ import os
 fd = time.strptime("2022-12-31", "%Y-%m-%d")
 td = int(time.mktime(time.strptime((date.today()- timedelta(days=1)).strftime("%Y-%m-%d"), "%Y-%m-%d")))
 
-
+tickers = vnstock.listing_companies().ticker
 
 def path_is_readable(spark_session, x):
   try:
