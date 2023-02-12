@@ -4,3 +4,4 @@
 .ipynb_checkpoints
 data/*
 raw_data/*
+vis_imgs/*

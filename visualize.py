@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1QNZnlOtjZFL5oksl4OEAjawTzdIhCjRq
 """
 
-pip install pyspark
+# pip install pyspark
 
 import pyspark
 from pyspark.context import SparkContext
@@ -27,6 +27,8 @@ import seaborn as sns
 from pyspark.sql.functions import to_timestamp
 from pyspark.sql import functions as F
 from scipy.interpolate import make_interp_spline
+from config import SPARK_MASTER, TICKER_NAME, VISUALIZATION_PATH, DATA_PATH
+
 
      
 import matplotlib.pyplot as plt
@@ -34,27 +36,32 @@ import pandas as pd
 
 import os
 
-os.makedirs('visualize_imgs', exist_ok=True)
+
+TICKER_VIS_PATH = VISUALIZATION_PATH + "/" + TICKER_NAME
+os.makedirs(TICKER_VIS_PATH, exist_ok=True)
 sns.set_theme()
 
-spark = SparkSession.builder.appName("Vu dep trai").getOrCreate()
-# conf = pyspark.SparkConf().setMaster("spark://node-master:7077")\
-#         .setAppName("Vu dep trai")\
-#         .set("spark.executor.memory","15g")
-# # sc = SparkContext.getOrCreate(conf=conf)
-# # spark.stop()
-# sc = SparkContext(conf = conf)
-# spark = SparkSession(sc)
+# spark = SparkSession.builder.appName("Vu dep trai").getOrCreate()
+conf = pyspark.SparkConf().setMaster(SPARK_MASTER)\
+        .setAppName("Vu dep trai")\
+        .set("spark.executor.memory","6g")
 
-TICKER = 'ACB'
+sc = SparkContext(conf = conf)
+spark = SparkSession(sc)
 
-df = spark.read.json(f'/content/drive/MyDrive/Smoll data /final_stock/{TICKER}.json',  multiLine=True)
-df = df.withColumnRenamed('close', 'close_price')
-df = df.withColumnRenamed('high', 'high_price')
-df = df.withColumnRenamed('low', 'low_price')
-df = df.withColumnRenamed('tradingDate', 'trading_date')
-df = df.withColumnRenamed('open', 'open_price')
-df = df.withColumnRenamed('ticker', 'ticker_name')
+TICKER = TICKER_NAME
+
+df = spark.read.json(f'{DATA_PATH}/{TICKER}.json',  multiLine=True)
+# drop duplicate
+df = df.dropDuplicates(['trading_date'])
+# sort by trading_date
+df = df.sort('trading_date', ascending=True)
+# df = df.withColumnRenamed('close', 'close_price')
+# df = df.withColumnRenamed('high', 'high_price')
+# df = df.withColumnRenamed('low', 'low_price')
+# df = df.withColumnRenamed('tradingDate', 'trading_date')
+# df = df.withColumnRenamed('open', 'open_price')
+# df = df.withColumnRenamed('ticker', 'ticker_name')
 
 df = df.withColumn('trading_date', unix_timestamp(to_date(df['trading_date']), "yyyy-MM-dd").cast("timestamp"))
 df.show(5)
@@ -69,14 +76,14 @@ ax.hist(df['price_diff'])
 ax.set_title("Distribution of Maximum day price difference")
 ax.set_xlabel("Price difference")
 ax.set_ylabel("Frequency")
-fig.savefig(f'visualize_imgs/price_diff_hist_{TICKER}.png')
+fig.savefig(f'{TICKER_VIS_PATH}/price_diff_hist.png')
 
 fig, ax = plt.subplots(figsize=(16, 8))
 ax.boxplot(df['price_diff'])
 ax.set_title("Boxplot of Maximum day price difference")
 ax.set_xlabel("Price difference")
 ax.set_ylabel("Frequency")
-fig.savefig(f'visualize_imgs/price_diff_boxplot_{TICKER}.png')
+fig.savefig(f'{TICKER_VIS_PATH}/price_diff_boxplot.png')
 
 # plt.plot(df.loc[df['ticker'] == 'MBS', 'tradingDate'], df.loc[df['ticker'] == 'MBS', 'open'])
 fig, ax = plt.subplots(figsize=(16, 8))
@@ -84,7 +91,7 @@ ax.plot(df['trading_date'], df['open_price'])
 ax.set_title("Trend of open price")
 ax.set_xlabel("Time")
 ax.set_ylabel("Open price")
-fig.savefig(f'visualize_imgs/open_price_ts_{TICKER}.png')
+fig.savefig(f'{TICKER_VIS_PATH}/open_price_ts.png')
 
 """### 2008 financial crisis
 
@@ -98,7 +105,7 @@ if len(crisis_df) > 0:
   ax.set_title("Open price during 2008 Financial Crisis")
   ax.set_xlabel("Time")
   ax.set_ylabel("Open price")
-  fig.savefig(f'visualize_imgs/2008_crisis_{TICKER}.png')
+  fig.savefig(f'{TICKER_VIS_PATH}/2008_crisis.png')
 
 """### COVID pandemic"""
 
@@ -109,23 +116,24 @@ if len(covid_df) > 0:
   ax.set_title("Open price during COVID pandemic")
   ax.set_xlabel("Time")
   ax.set_ylabel("Open price")
-  fig.savefig(f'visualize_imgs/covid_{TICKER}.png')
+  fig.savefig(f'{TICKER_VIS_PATH}/covid.png')
 
 from scipy.signal import savgol_filter
 plt.figure(figsize=(16,8))
 
 # Dataset
-x = df['trading_date']
-y = df['price_diff']
-y = savgol_filter(y, 31, 3)
- 
-# Plotting the Graph
-fig, ax = plt.subplots(figsize=(16,8))
-ax.plot(x, y)
-ax.set_title("Maximum day price difference over time (smoothed using Savgol filter)")
-ax.set_xlabel("Time")
-ax.set_ylabel("Price difference")
-fig.savefig(f'visualize_imgs/price_diff_smoothed_{TICKER}.png')
+if len(df) > 31:
+  x = df['trading_date']
+  y = df['price_diff']
+  y = savgol_filter(y, 31, 3)
+  
+  # Plotting the Graph
+  fig, ax = plt.subplots(figsize=(16,8))
+  ax.plot(x, y)
+  ax.set_title("Maximum day price difference over time (smoothed using Savgol filter)")
+  ax.set_xlabel("Time")
+  ax.set_ylabel("Price difference")
+  fig.savefig(f'{TICKER_VIS_PATH}/price_diff_smoothed.png')
 
 """### Seasonality"""
 
@@ -136,7 +144,7 @@ fig.savefig(f'visualize_imgs/price_diff_smoothed_{TICKER}.png')
 # result = seasonal_decompose(df['close_price'].head(5000), model='additive', period = 30)
 # result.plot()  
 # plt.show()
-# plt.savefig(f'visualize_imgs/seasonality_{TICKER}.png')
+# plt.savefig(f'{TICKER_VIS_PATH}/seasonality.png')
 
 # plt.figure(figsize=(16,8))
 # money_flow_volume = ((df['close_price'] - df['low_price']) - (df['high_price'] - df['close_price'])) / (df['high_price'] - df['low_price']) * df['volume']
@@ -155,7 +163,9 @@ df['returns'] = df['close_price'].pct_change(1)
 df['CumulativeReturn'] = (1+df['returns']).cumprod()
 df['MA20'] = df['close_price'].rolling(20).mean()
 df['STD20'] = df['close_price'].rolling(20).std()
-df['MA150'] = df['close_price'].rolling(150).mean()
+
+if len(df) > 150:
+  df['MA150'] = df['close_price'].rolling(150).mean()
 
 fig, ax = plt.subplots(figsize=(16,10))
 ax.hist(df['returns'], density=True, bins=200)
@@ -163,7 +173,7 @@ ax.set_title("Distribution of Returns")
 ax.set_xlabel("Returns")
 ax.set_ylabel("Frequency")
 ax.set_xlim(-0.10, 0.10)
-fig.savefig(f'visualize_imgs/return_dist_{TICKER}.png')
+fig.savefig(f'{TICKER_VIS_PATH}/return_dist.png')
 
 """### Closing price with 20 days SMA and 150 days SMA"""
 
@@ -171,17 +181,18 @@ trading_days = df['trading_date']
 fig, ax = plt.subplots(figsize=(16,10))
 ax.plot(trading_days, df['close_price'],label="Closing Price", color="#3498db")
 ax.plot(trading_days, df['MA20'], label="20 Days SMA", color="#e67e22")
-ax.plot(trading_days, df['MA150'], label="150 Days SMA", color="#95a5a6")
+if len(df) > 150:
+  ax.plot(trading_days, df['MA150'], label="150 Days SMA", color="#95a5a6")
 ax.set_title("Stock Prices with Indicators", fontsize="14", fontweight="semibold")
 ax.set_xlim([trading_days.min(), trading_days.max()])
-plt.legend()
+ax.legend()
 
 volplot = ax.twinx()
 volplot.set_ylim([0,df['volume'].max()*3])
-volplot.plot(trading_days, df[["volume"]], color="#2ecc71", label="volume traded", alpha=0.5)
+volplot.plot(trading_days, df["volume"], color="#2ecc71", label="volume traded", alpha=0.5)
 volplot.grid(False)
-plt.legend();
-fig.savefig(f'visualize_imgs/price_with_indicator_{TICKER}.png')
+ax.legend()
+fig.savefig(f'{TICKER_VIS_PATH}/price_with_indicator.png')
 
 """### Bollinger band"""
 
@@ -194,6 +205,6 @@ ax.plot(trading_days, df['close_price'],label="Closing Price", color="#3498db")
 ax.fill_between(trading_days, df['upper_band'], df['lower_band'], color='#e67e22', alpha=0.6, label="Bollinger Band")
 ax.set_title('Stock Prices with Bollinger Bands')
 ax.set_xlim(trading_days.min(), trading_days.max())
-plt.legend();
-plt.savefig(f'visualize_imgs/bollinger_bands_{TICKER}.png')
+ax.legend()
+fig.savefig(f'{TICKER_VIS_PATH}/bollinger_bands.png')
 

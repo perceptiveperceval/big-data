@@ -5,7 +5,6 @@ from airflow.operators.bash import *
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from datetime import datetime, date
 import os
-from config import DATA_PATH, RAW_DATA_PATH
 
 
 default_args = {'owner': 'airflow',}
@@ -22,13 +21,13 @@ with DAG(
                                     application = "get_prices_complete.py",
                                     conn_id = "spark_default",
                                     dag = dag)
-    # predict_spark_job = SparkSubmitOperator(task_id = "get_prices_simulation",
-    #                                 application = "forecasting.py",
-    #                                 conn_id = "spark_default",
-    #                                 dag = dag)
-    # visualize_spark_job = SparkSubmitOperator(task_id = "visualize_simulation",
-    #                                     application = "visualize.py",
-    #                                     conn_id = "spark_default",
-    #                                     dag = dag)
+    predict_spark_job = SparkSubmitOperator(task_id = "spark_default",
+                                    application = "forecasting.py",
+                                    conn_id = "spark_default",
+                                    dag = dag)
+    visualize_spark_job = SparkSubmitOperator(task_id = "visualize",
+                                        application = "visualize.py",
+                                        conn_id = "spark_default",
+                                        dag = dag)
     
-    # crawl_spark_job >> [predict_spark_job, visualize_spark_job]
+    crawl_spark_job >> [predict_spark_job, visualize_spark_job]

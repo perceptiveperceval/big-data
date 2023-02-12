@@ -1,7 +1,7 @@
 
 import time
 import vnstock
-from datetime import date,timedelta
+from datetime import date,timedelta, datetime
 import pyspark
 from pyspark.sql import SparkSession
 import requests
@@ -16,12 +16,19 @@ import os
 # doc fd : "2022-12-31"
 
 
-tickers = vnstock.listing_companies().ticker
-with open("simulation/current_time.txt","w") as date_file:
-  fd = time.strptime(date_file.read(), "%Y-%m-%d")
-  td = fd+ timedelta(days=7)
-  date_file.write(time.strftime("%Y-%m-%d", td))
+# tickers = vnstock.listing_companies().ticker
+current_time_path = "/home2/hadoop/project/big-data/simulation/current_time.txt"
 
+with open(current_time_path, "r") as f:
+    line = f.readlines()[0]  # Y, m, d
+    start_date = datetime.strptime(line, "%Y-%m-%d")
+    end_date = start_date + timedelta(days=7)
+
+fd = int(time.mktime(start_date.timetuple()))
+td = int(time.mktime(end_date.timetuple()))
+
+with open(current_time_path, "w") as f:
+    f.write(end_date.strftime("%Y-%m-%d"))
 
 
 def path_is_readable(spark_session, x):
@@ -99,12 +106,12 @@ for row in request_df_collected:
        .select("close_price","high_price","low_price","open_price","ticker_name","trading_date","volume")
 
   
-  if path_is_readable(spark, "{DATA_PATH}/{}.json".format(row.execute.ticker)):
-    file = spark.read.json("{DATA_PATH}/{}.json".format(row.execute.ticker))
+  if path_is_readable(spark, f"{DATA_PATH}/{row.execute.ticker}.json"):
+    file = spark.read.json(f"{DATA_PATH}/{row.execute.ticker}.json")
     file_latest_date = file.withColumn("date",to_date(substring('trading_date',0,10))).select('date').rdd.max()[0]
     final = queries.withColumn("date",to_date(substring('trading_date',0,10))).filter(col("date")>file_latest_date).drop("date")
-    final.write.mode("append").json("{DATA_PATH}/{}.json".format(row.execute.ticker))
+    final.write.mode("append").json(f"{DATA_PATH}/{row.execute.ticker}.json")
   else:
-    queries.write.mode("append").json("{DATA_PATH}/{}.json".format(row.execute.ticker))
+    queries.write.mode("append").json(f"{DATA_PATH}/{row.execute.ticker}.json")
 
 # # spark.stop()
