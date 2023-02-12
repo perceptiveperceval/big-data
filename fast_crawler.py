@@ -61,7 +61,7 @@ if __name__ == "__main__":
     tickers = listing_companies()['ticker'].tolist()
 
     start_date = int(time.mktime(time.strptime("1000-01-01", "%Y-%m-%d")))
-    end_date = int(time.mktime(time.strptime("2024-02-01", "%Y-%m-%d")))
+    end_date = int(time.mktime(time.strptime("2022-12-31", "%Y-%m-%d")))
     num_thread = os.cpu_count() * 2
     print("Using {} threads to crawl {} tickers".format(num_thread, len(tickers)))
 
@@ -78,8 +78,6 @@ if __name__ == "__main__":
         p.join()
 
     pbar.close()
-
-
 
 
 
