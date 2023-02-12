@@ -51,7 +51,7 @@ spark = SparkSession(sc)
 
 TICKER = TICKER_NAME
 
-df = spark.read.json(f'{DATA_PATH}/{TICKER}.json',  multiLine=True)
+df = spark.read.json(f'{DATA_PATH}/{TICKER}.json')
 # drop duplicate
 df = df.dropDuplicates(['trading_date'])
 # sort by trading_date
@@ -185,13 +185,13 @@ if len(df) > 150:
   ax.plot(trading_days, df['MA150'], label="150 Days SMA", color="#95a5a6")
 ax.set_title("Stock Prices with Indicators", fontsize="14", fontweight="semibold")
 ax.set_xlim([trading_days.min(), trading_days.max()])
-ax.legend()
+ax.legend(loc="upper left")
 
 volplot = ax.twinx()
 volplot.set_ylim([0,df['volume'].max()*3])
 volplot.plot(trading_days, df["volume"], color="#2ecc71", label="volume traded", alpha=0.5)
 volplot.grid(False)
-ax.legend()
+volplot.legend()
 fig.savefig(f'{TICKER_VIS_PATH}/price_with_indicator.png')
 
 """### Bollinger band"""
