@@ -32,15 +32,19 @@ def fill_nan_df(df, column: str):
 
 def plot_result(df_train: pd.DataFrame, df_forecast: pd.DataFrame, title: str = None, save_postfix: str = None):
     global TICKER_NAME, FORCASTING_PATH
+    # reset plot
+    plt.clf()
     save_postfix = save_postfix if save_postfix else (title if title else "")
     sns.set(rc={'figure.figsize':(11, 4)})
-    df_train.set_index("ds").y.plot(linewidth=0.5)
+    df_train.set_index("ds").y.plot(linewidth=0.5, c="blue")
     df_forecast.set_index("ds").yhat.plot(linewidth=0.5, c="red")
-    plt.fill_between(df_forecast.ds, df_forecast.yhat_lower, df_forecast.yhat_upper, alpha=0.25)
+    plt.fill_between(df_forecast.ds, df_forecast.yhat_lower, df_forecast.yhat_upper, alpha=0.25, color="blue", label='90% confidence interval')
+    # remove margin fill between
     if title:
         plt.title(title)
     # save image
     os.makedirs(FORCASTING_PATH + "/" + TICKER_NAME, exist_ok=True)
+    plt.legend()
     plt.savefig(FORCASTING_PATH + "/" + TICKER_NAME + "/"  + f"{save_postfix}.png")
 
 
@@ -64,6 +68,8 @@ df = spark.read.json(DATA_PATH + "/" + TICKER_NAME + ".json")
 df = df.withColumn("trading_date", to_utc_timestamp("trading_date", "GMT+7"))
 df = df.withColumn("trading_date", df["trading_date"].cast(DateType()))
 df = df.withColumnRenamed("ticker_name", "unique_id").sort("trading_date")
+# drop duplicate
+df = df.dropDuplicates(["trading_date"])
 
 print(df.show(5))
 
@@ -105,13 +111,17 @@ def prophet_udf(df):
         seasonality_mode='multiplicative'
     )
     m.fit(df)
-    future = m.make_future_dataframe(periods=7, freq='d', include_history=True)
+    future = m.make_future_dataframe(periods=7 * 8, freq='d', include_history=True)
     forecast = m.predict(future)
     return forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
 
 
 forecast_attr = ["close_price", "high_price", "low_price", "open_price", "volume"]
+# forecast_attr = ["close_price"]
+print("total_data", df_filled.count())
 for attr in forecast_attr:
     df_train = prepare_data(df_filled, "trading_date", "unique_id", attr)
+    print("train", df_train.count())
     df_forecast = df_train.groupby("unique_id").apply(prophet_udf)
+    print("forecast_size", df_forecast.count())
     plot_result(df_train.toPandas(), df_forecast.toPandas(), title=attr)
