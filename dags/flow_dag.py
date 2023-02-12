@@ -18,7 +18,7 @@ with DAG(
 ) as dag:
     
     crawl_spark_job = SparkSubmitOperator(task_id = "get_prices",
-                                    application = "get_prices_complete.py",
+                                    application = "/home2/hadoop/project/big-data/complete/get_prices_complete.py",
                                     conn_id = "spark_default",
                                     dag = dag)
     predict_spark_job = SparkSubmitOperator(task_id = "spark_default",

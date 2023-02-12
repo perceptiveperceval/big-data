@@ -10,22 +10,15 @@ default_args = {'owner': 'airflow','start_date': datetime(2023, 1, 1,1),}
 
 with DAG(
     dag_id='initialization',
-    description='push crawled data (from beginning to 31/12/2022) from local to hdfs and crawl the rest using spark',
-    schedule_interval='@once'
+    description='crawl data (from beginning to 31/12/2022) using spark and save to hdfs',
+    schedule_interval='@never'
 ) as dag:
     
     
-    path = os.getcwd()
-    name = "get_prices.py"
-    for root, dirs, files in os.walk(path):
-        if name in files:
-            app_path = (os.path.join(root, name))
-            break
-
-    upload_file = PythonOperator()
+    name = "get_prices_init"
 
 
     spark_crawl = SparkSubmitOperator(task_id = "crawl_recent_prices",
-                                    application = "init/get_prices_init.py" ,
+                                    application = "/home2/hadoop/project/big-data/complete/get_prices_init.py" ,
                                     conn_id = "spark_default",
                                     dag = dag)

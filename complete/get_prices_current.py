@@ -15,7 +15,7 @@ import os
 
 # doc fd : "2022-12-31"
 
-fd = int(time.mktime(time.strptime((date.today()- timedelta(days=8)).strftime("%Y-%m-%d"), "%Y-%m-%d")))
+fd = time.strptime("2022-12-31", "%Y-%m-%d")
 td = int(time.mktime(time.strptime((date.today()- timedelta(days=1)).strftime("%Y-%m-%d"), "%Y-%m-%d")))
 
 
